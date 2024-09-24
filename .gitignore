@@ -1,0 +1,9 @@
+target
+Cargo.lock
+.vscode
+rust-sgx-sdk
+sysroot
+enclave_u*
+enclave/enclave_t*
+lib
+bin

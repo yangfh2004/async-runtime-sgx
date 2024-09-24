@@ -1,0 +1,15 @@
+[package]
+name = "async-runtime"
+version = "1.0.0"
+authors = ["Fanghao Yang"]
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+sgx_types = { git = "https://gitlab.com/dexlabs/incubator-teaclave-sgx-sdk", branch = "v2.0.0-sgx-emm" }
+sgx_urts = { git = "https://gitlab.com/dexlabs/incubator-teaclave-sgx-sdk", branch = "v2.0.0-sgx-emm" }
+
+[[bin]]
+name = "app"
+path = "src/main.rs"
+bench = false

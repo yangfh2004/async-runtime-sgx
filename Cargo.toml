@@ -1,0 +1,6 @@
+[workspace]
+members = ["enclave", "app"]
+
+exclude = ["rust-sgx-sdk/rustlib/std"]
+
+resolver = "2"
