@@ -31,10 +31,11 @@ fn main() {
     // measure the time it takes to do 8 http request
     let start = std::time::Instant::now();
     // create http request
-    let ret = unsafe { spawn_http_request(eid, &mut status, 8) };
+    let count = 8;
+    let ret = unsafe { spawn_http_request(eid, &mut status, count) };
     assert_eq!(ret, SgxStatus::Success);
     assert_eq!(status, SgxStatus::Success);
 
     let duration = start.elapsed();
-    println!("Time taken: {:?} for 8 requests", duration);
+    println!("Time taken: {:?} for {} requests", duration, count);
 }

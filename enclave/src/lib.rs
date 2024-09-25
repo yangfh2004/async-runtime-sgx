@@ -34,9 +34,10 @@ use tokio::time::sleep;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Builder::new_multi_thread()
-    .worker_threads(8) // TCS = 4 * 2 (extra for dns worker) + 1 = 9. 1 reserved for initializer
-    .enable_all()
-    .build().unwrap();
+        .worker_threads(1) // TCS = 1 + 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 4
+        .enable_all()
+        .build()
+        .unwrap();
 }
 
 /// # Safety
@@ -63,8 +64,8 @@ pub unsafe extern "C" fn spawn_http_request(count: u64) {
             let _handle = ExceptionHandler::new().unwrap();
             let client = reqwest::Client::new();
             let res = {
-                sleep(Duration::from_millis(i * 10)).await;
-                println!("{} ms delay", i * 10);
+                sleep(Duration::from_millis(i * 5)).await;
+                println!("{} ms delay", i * 5);
                 // get some fun facts about cats
                 client
                     .get("https://catfact.ninja/fact")
