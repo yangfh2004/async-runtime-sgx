@@ -34,7 +34,7 @@ use tokio::time::sleep;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Builder::new_multi_thread()
-        .worker_threads(1) // TCS = 1 + 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 4
+        .worker_threads(4) // TCS = 4 * 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 7
         .enable_all()
         .build()
         .unwrap();
@@ -58,14 +58,15 @@ pub unsafe extern "C" fn init_runtime() {
 pub unsafe extern "C" fn spawn_http_request(count: u64) {
     let rt = &*RUNTIME.handle();
     let mut handles = Vec::new();
-    for i in 0..count {
+    for _ in 0..count {
+        let client = reqwest::Client::builder()
+            .tcp_keepalive(Duration::from_secs(1))
+            .build()
+            .unwrap();
         let handle = rt.spawn(async move {
             #[cfg(target_vendor = "teaclave")]
             let _handle = ExceptionHandler::new().unwrap();
-            let client = reqwest::Client::new();
             let res = {
-                sleep(Duration::from_millis(i * 5)).await;
-                println!("{} ms delay", i * 5);
                 // get some fun facts about cats
                 client
                     .get("https://catfact.ninja/fact")

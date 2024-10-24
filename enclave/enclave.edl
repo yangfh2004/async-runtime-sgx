@@ -25,7 +25,6 @@ enclave {
 
     trusted {
         public sgx_status_t spawn_http_request(uint64_t count);
-
         public sgx_status_t init_runtime();
     };
 };
