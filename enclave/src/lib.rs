@@ -31,6 +31,7 @@ use bytes::Bytes;
 use exception::ExceptionHandler;
 use http_body_util::{BodyExt, Empty};
 use lazy_static::lazy_static;
+use sgx_types::error::SgxStatus;
 use std::time::Duration;
 use tokio::runtime::{Builder, Runtime};
 use tokio::time::sleep;
@@ -45,7 +46,7 @@ use serde::Deserialize;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Builder::new_multi_thread()
-        .worker_threads(8) // TCS = 4 * 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 7
+        .worker_threads(4) // TCS = 4 * 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 7
         .enable_all()
         .build()
         .unwrap();
@@ -53,15 +54,16 @@ lazy_static! {
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn init_runtime() {
+pub unsafe extern "C" fn init_runtime() -> SgxStatus {
     #[cfg(target_vendor = "teaclave")]
     std::backtrace::enable_backtrace(std::backtrace::PrintFormat::Full)
         .expect("Should not have failed according to documentation");
     let rt = &*RUNTIME.handle();
     rt.block_on(async {
         sleep(Duration::from_millis(10)).await;
-        println!("Hello from the enclave!");
+        println!("Tokio runtime initialized!");
     });
+    SgxStatus::Success
 }
 
 #[derive(Debug, Deserialize, Clone)]
@@ -77,11 +79,9 @@ pub const COINBASE_TICKER_URL: &str = "https://api.coinbase.com/v2/prices/ETH-US
 /// I tested this only to investigate what aspect of the client might be incompatible with the enclave,
 /// but I wasn’t able to reproduce the error. I do NOT recommend using this approach, as I prefer the lower-level approach.
 pub async fn fetch_url() -> Result<()> {
-    println!("Entered fetch_url");
     let root_store = RootCertStore {
         roots: webpki_roots::TLS_SERVER_ROOTS.into(),
     };
-
     let config = rustls::ClientConfig::builder()
         .with_root_certificates(root_store)
         .with_no_client_auth();
@@ -95,14 +95,8 @@ pub async fn fetch_url() -> Result<()> {
     // I just wanted to check whether or not it worked for my own edification.
     let client: Client<HttpsConnector<HttpConnector>, Empty<Bytes>> =
         Client::builder(TokioExecutor::new()).build(https);
-
     let url = COINBASE_TICKER_URL.parse::<hyper::Uri>().unwrap();
-
     let res = client.get(url).await?;
-
-    println!("Response: {}", res.status());
-    println!("Headers: {:#?}\n", res.headers());
-
     let bytes = res.into_body().collect().await?.to_bytes();
     let body = String::from_utf8(bytes.to_vec()).context("Response body is not valid UTF-8")?;
     // deserialize the response into a TickerPrice struct like this:
@@ -117,13 +111,17 @@ pub async fn fetch_url() -> Result<()> {
 
 /// # Safety
 #[no_mangle]
-pub unsafe extern "C" fn spawn_http_request(count: u64) {
+pub unsafe extern "C" fn spawn_http_request(count: u64) -> SgxStatus {
     #[cfg(target_vendor = "teaclave")]
     let _handle = ExceptionHandler::new().unwrap();
     let rt = &*RUNTIME.handle();
     let mut handles = Vec::new();
     for _ in 0..count {
-        let handle = rt.block_on(fetch_url());
+        let handle = rt.spawn(fetch_url());
         handles.push(handle);
     }
+    for handle in handles {
+        rt.block_on(handle).unwrap().unwrap();
+    }
+    SgxStatus::Success
 }
