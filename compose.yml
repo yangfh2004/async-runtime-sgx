@@ -1,0 +1,20 @@
+services:
+  async-runtime:
+    image: async-runtime
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: "builder"
+      args:
+        - SGX_PRERELEASE=${SGX_PRERELEASE}
+        - JOBS=${JOBS}
+        - SGX_MODE=${SGX_MODE}
+        - DEBUG_MODE=1
+    env_file: ${COMPOSE_ENV_FILES:-.env}
+    volumes:
+      - .:/usr/local/src:rw
+    devices:
+      - ${SGX_ENCLAVE}
+      - ${SGX_PROVISION}
+    tty: true
+    stdin_open: true
