@@ -46,7 +46,7 @@ use serde::Deserialize;
 
 lazy_static! {
     static ref RUNTIME: Runtime = Builder::new_multi_thread()
-        .worker_threads(4) // TCS = 4 * 2 (one for dns worker and one for decode) + 1 (reserved for initializer) = 7
+        .worker_threads(1)
         .enable_all()
         .build()
         .unwrap();
