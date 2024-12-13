@@ -47,6 +47,7 @@ use serde::Deserialize;
 lazy_static! {
     static ref RUNTIME: Runtime = Builder::new_multi_thread()
         .worker_threads(1)
+        .max_blocking_threads(1)
         .enable_all()
         .build()
         .unwrap();
